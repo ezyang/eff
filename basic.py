@@ -1,4 +1,4 @@
-from effects import handler, run, Eff
+from eff import handler, run, Eff
 from typing import Callable, TypeVar, cast
 
 T = TypeVar("T")

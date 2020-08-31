@@ -1,4 +1,4 @@
-from effects import handler, run, Eff, Resume
+from eff import handler, run, Eff, Resume
 from dataclasses import dataclass
 from typing import TypeVar, Callable, cast, Generic, Any
 

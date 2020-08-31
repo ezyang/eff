@@ -11,13 +11,13 @@ from typing import Generator, TypeVar, Any, Callable, cast, Dict, Tuple
 # around; while this would work, I thought it was pretty inelegant,
 # so I just did as Pythoners do and made up some less precise types.
 
-T = TypeVar("T")
 R = TypeVar("R")
 
 Eff = Generator[Tuple[Any, ...], Any, R]
 Operation = Callable[..., Any]
 # Should take kwarg resume: Callable[..., Eff[R]])
 Handler = Callable[..., Eff[R]]
+Resume = Callable[..., Eff[R]]
 
 def handler(
     g: Eff[R],
@@ -33,8 +33,7 @@ def handler(
         if op in h:
             return (yield from h[op](*args, resume=resume))
         else:
-            r = yield op, args
-            return (yield from resume(r))
+            return (yield from resume((yield op, args)))
     except StopIteration as e:
         return cast(R, e.value)
 
@@ -45,75 +44,3 @@ def run(g: Eff[R]) -> R:
         raise RuntimeError(f'unhandled effect {op}({args})')
     except StopIteration as e:
         return cast(R, e.value)
-
-
-# Some basic test cases
-
-def output(arg: int) -> Eff[None]:
-    return cast(None, (yield (output, (arg,))))
-
-
-def input() -> Eff[int]:
-    return cast(int, (yield (input, ())))
-
-
-def sample() -> Eff[None]:
-    i = yield from input()
-    yield from output(i)
-    yield from output(i + 1)
-    yield from output(i + 2)
-
-
-def output_handler(arg: int, *, resume: Callable[[], Eff[R]]) -> Eff[R]:
-    print(arg)
-    # NB: this form is inefficient, because we always push a stack
-    # frame even when it's not necessary
-    return (yield from resume())
-
-
-def input_handler(*, resume: Callable[[int], Eff[R]]) -> Eff[R]:
-    return (yield from resume(3))
-
-
-run(
-    handler(
-        sample(),
-        {input: input_handler,
-         output: output_handler
-         }
-    )
-)
-
-run(
-    handler(
-        handler(
-            sample(),
-            {output: output_handler}
-        ),
-        {input: input_handler}
-    )
-)
-
-
-def sample2() -> Eff[int]:
-    yield from error()
-    print("omitted")
-    return 2
-
-
-def error() -> Eff[T]:
-    return cast(T, (yield (error, ())))
-
-
-def error_handler(*, resume: Callable[[int], Eff[R]]) -> Eff[int]:
-    # ignore resume
-    yield from []
-    return 2
-
-
-run(handler(sample2(), {error: error_handler}))
-
-
-# Reverse mode AD
-
-

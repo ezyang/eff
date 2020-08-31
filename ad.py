@@ -103,12 +103,7 @@ print(evaluate(grad(cube, 2)))
 
 def t1_body() -> Eff[float]:
     def t1_y(y: Variable[float]) -> Eff[Variable[float]]:
-        def t1_x(x: Variable[Variable[float]]) -> Eff[Variable[Variable[float]]]:
-            return (yield from times(
-                (yield from times(x, x)),
-                x
-            ))
-        return (yield from grad(t1_x, y))
+        return (yield from grad(cube, y))
     return (yield from grad(t1_y, float(3)))
 
 print(evaluate(t1_body()))
